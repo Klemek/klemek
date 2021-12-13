@@ -93,10 +93,12 @@ def inc(p):
 def solve_challenge(challenge):
     salt, md5, _ = challenge
     current = 'a'
+    i = 0
     while True:
         hash = hashlib.md5((salt+current).encode('ascii')).hexdigest()
+        i += 1
         if hash.startswith(md5):
-            print(f"solved challenge: {current}")
+            print(f"solved challenge: {current} {i:,}")
             return current
         current = inc(current)
 
