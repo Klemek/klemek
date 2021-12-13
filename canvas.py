@@ -20,7 +20,7 @@ H = 240
 TIMEOUT = 10
 TARGET_LENS = 10000
 CHALLENGE_FILE = f"{dir}/challenges.csv"
-PIXEL_THRESHOLD = 1
+PIXEL_THRESHOLD = 5
 
 class Data:
     def __init__(self) -> None:
