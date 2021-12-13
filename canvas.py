@@ -57,11 +57,11 @@ def get_next_pixel(data):
             except OSError:
                 pass
     if len(targets) == 0:
-        print("no pixel to update")
+        print(f"[{os.getpid()}] no pixel to update")
         return None
     else:
         x, y, ref_color, dist_color = random.choice(targets)
-        print(f"pixel {x},{y} is {dist_color} and should be {ref_color} (1 of {len(targets)}/{total})({(total-len(targets))/total:.2%})")
+        print(f"[{os.getpid()}] pixel to update : {x},{y} {dist_color} => {ref_color} (remaining {len(targets)}/{total}) ({(total-len(targets))/total:.2%} done)")
         return x, y, f"{ref_color[0]:02x}{ref_color[1]:02x}{ref_color[2]:02x}".upper()
 
 def get_challenge():
@@ -72,10 +72,10 @@ def get_challenge():
     if r.status_code == 200:
         data = r.content.decode("utf-8")
         res = re.search(r"Your salt is (\w+). Find a string that starts with this salt and whose md5 hash starts with: (\w+)", data)
-        print(f"got challenge: salt={res[1]} md5={res[2]}")
+        print(f"[{os.getpid()}] got challenge: salt={res[1]} md5={res[2]}")
         return res[1], res[2], r.cookies['PHPSESSID']
     else:
-        print(f"cannot get challenge: {r.status_code} {r.reason}")
+        print(f"[{os.getpid()}] cannot get challenge: {r.status_code} {r.reason}")
         return None
 
 
@@ -103,7 +103,7 @@ def solve_challenge(challenge):
         h.update(current.encode('ascii'))
         i += 1
     dt = time.time() - t0
-    print(f"solved challenge: {current} count={i:,} time={dt:.3f}s speed={i/dt:,.3f}/s")
+    print(f"[{os.getpid()}] solved challenge: {current} count={i:,} time={dt:.3f}s speed={i/dt:,.3f}/s")
     return current
         
 
@@ -120,9 +120,9 @@ def paint(pixel_data, challenge, answer):
     }
     r = requests.post(f"{URL}/api", data=body, cookies={"PHPSESSID": challenge[2]})
     if r.status_code == 200:
-        print(r.content)
+        print(f"[{os.getpid()}] {r.content.decode('utf-8')}")
     else:
-        print(f"cannot update pixel: {r.status_code} {r.reason}")
+        print(f"[{os.getpid()}] cannot update pixel: {r.status_code} {r.reason}")
 
 
 def work():
@@ -134,7 +134,7 @@ def work():
             pixel_data = get_next_pixel(data)
             if pixel_data:
                 if len(data.stored_challenges) > 0:
-                    print("using cached challenge")
+                    print(f"[{os.getpid()}] using cached challenge, remaining={len(data.stored_challenges)}")
                     challenge, answer = data.stored_challenges.pop()
             if challenge is None:
                 challenge = get_challenge()
@@ -142,8 +142,8 @@ def work():
                     continue
                 answer = solve_challenge(challenge)
             if pixel_data is None:
-                print("caching challenge")
                 data.stored_challenges.append((challenge, answer))
+                print(f"[{os.getpid()}] caching challenge, remaining={len(data.stored_challenges)}")
             else:
                 paint(pixel_data, challenge, answer)
         except KeyboardInterrupt:
