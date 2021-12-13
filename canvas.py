@@ -7,16 +7,8 @@ import hashlib
 import random
 import sys
 import traceback
-from multiprocessing import Process, Lock
+from multiprocessing import Process
 import time
-# try:
-#     from numba.cuda import jit
-# except ImportError as e:
-#     print(e)
-#     def jit(*args):
-#         def decorator(func):
-#             return func
-#         return decorator
 dir = os.path.dirname(os.path.realpath(__file__))
 
 REF_URL = 'https://raw.githubusercontent.com/Klemek/klemek/main/ref.png'
@@ -28,10 +20,8 @@ TIMEOUT = 10
 class Data:
     def __init__(self) -> None:
         self.cached_targets = []
-        self.img_lock = Lock()
         self.t0 = None
         self.stored_challenges = []
-        self.stored_lock = Lock()
 
 
 def convert24to16(r, g, b):
@@ -49,7 +39,6 @@ def get_next_pixel(data):
     r = requests.get(f"{REF_URL}", headers=headers)
     ref_img = Image.open(BytesIO(r.content))
     total = sum(1 if ref_img.getpixel((x, y))[3] > 0 else 0 for x in range(W) for y in range(H))
-    data.img_lock.acquire()
     targets = data.cached_targets[::1]
     if data.t0 is None or (time.time() - data.t0) > TIMEOUT:
         r = requests.get(f"{URL}/canvas.png", headers=headers)
@@ -67,7 +56,6 @@ def get_next_pixel(data):
                 data.cached_targets = targets
             except OSError:
                 pass
-    data.img_lock.release()
     if len(targets) == 0:
         print("no pixel to update")
         return None
@@ -137,18 +125,17 @@ def paint(pixel_data, challenge, answer):
         print(f"cannot update pixel: {r.status_code} {r.reason}")
 
 
-def work(data):
+def work():
+    data = Data()
     while True:
         try:
             challenge = None
             answer = None
             pixel_data = get_next_pixel(data)
             if pixel_data:
-                data.stored_lock.acquire()
                 if len(data.stored_challenges) > 0:
                     print("using cached challenge")
                     challenge, answer = data.stored_challenges.pop()
-                data.stored_lock.release()
             if challenge is None:
                 challenge = get_challenge()
                 if challenge is None:
@@ -156,9 +143,7 @@ def work(data):
                 answer = solve_challenge(challenge)
             if pixel_data is None:
                 print("caching challenge")
-                data.stored_lock.acquire()
                 data.stored_challenges.append((challenge, answer))
-                data.stored_lock.release()
             else:
                 paint(pixel_data, challenge, answer)
         except KeyboardInterrupt:
@@ -168,7 +153,6 @@ def work(data):
 
 
 if __name__ == '__main__':
-    data = Data()
     n_threads = int(os.environ['N']) if 'N' in os.environ else 8
     for p in range(n_threads):
-        Process(target=work, args=(data,)).start()
+        Process(target=work).start()
