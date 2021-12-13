@@ -9,6 +9,7 @@ import random
 import sys
 import traceback
 from multiprocessing import Process, RLock, RawValue, RawArray
+from ctypes import c_float, c_int
 import time
 dir = os.path.dirname(os.path.realpath(__file__))
 
@@ -17,13 +18,66 @@ URL = 'http://challs.xmas.htsp.ro:3002/'
 W = 320
 H = 240
 TIMEOUT = 10
+TARGET_LENS = 10000
 CHALLENGE_FILE = f"{dir}/challenges.csv"
+PIXEL_THRESHOLD = 1
 
 class Data:
     def __init__(self) -> None:
-        self.cached_targets = []
-        self.t0 = None
+        self.img_lock = RLock()
+        self.targets_cursor = RawValue(c_int, 0)
+        self.targets_cursor = 0
+        self.cached_targets = [RawArray(c_int, TARGET_LENS) for _ in range(5)]
+        self.t0_lock = RLock()
+        self.t0 = RawValue(c_float, 0)
         self.challenge_lock = RLock()
+    
+    def is_time(self):
+        self.t0_lock.acquire()
+        try:
+            return time.time() - self.t0.value > TIMEOUT
+        finally:
+            self.t0_lock.release()
+    
+    def reset_time(self):
+        self.t0_lock.acquire()
+        try:
+            self.t0 = c_float(time.time())
+        finally:
+            self.t0_lock.release()
+
+    
+    def get_random_cached_target(self):
+        self.img_lock.acquire()
+        try:
+            size = self.targets_cursor
+            if size >= PIXEL_THRESHOLD:
+                index = random.randint(0, size - 1)
+                x = self.cached_targets[0][index]
+                y = self.cached_targets[1][index]
+                r = self.cached_targets[2][index]
+                g = self.cached_targets[3][index]
+                b = self.cached_targets[4][index]
+                for i in range(5):
+                    self.cached_targets[i][index] = self.cached_targets[i][size - 1]
+                self.targets_cursor = size - 1
+                return (x, y, f"{r:02x}{g:02x}{b:02x}".upper()), size - 1
+        finally:
+            self.img_lock.release()
+        return None, 0
+
+    def save_targets(self, targets):
+        self.img_lock.acquire()
+        try:
+            self.targets_cursor = len(targets)
+            if self.targets_cursor > 0:
+                self.cached_targets[0][:self.targets_cursor] = [x for x,_,_ in targets]
+                self.cached_targets[1][:self.targets_cursor] = [y for _,y,_ in targets]
+                self.cached_targets[2][:self.targets_cursor] = [c[0] for _,_,c in targets]
+                self.cached_targets[3][:self.targets_cursor] = [c[1] for _,_,c in targets]
+                self.cached_targets[4][:self.targets_cursor] = [c[2] for _,_,c in targets]
+        finally:
+            self.img_lock.release()
     
     def get_stored_challenge(self):
         if os.path.exists(CHALLENGE_FILE):
@@ -67,12 +121,10 @@ def get_next_pixel(data):
     r = requests.get(f"{REF_URL}", headers=headers)
     ref_img = Image.open(BytesIO(r.content))
     total = sum(1 if ref_img.getpixel((x, y))[3] > 0 else 0 for x in range(W) for y in range(H))
-    targets = data.cached_targets[::1]
-    if data.t0 is None or (time.time() - data.t0) > TIMEOUT:
+    if data.is_time():
         r = requests.get(f"{URL}/canvas.png", headers=headers)
         if r.status_code == 200:
             try:
-                data.t0 = time.time()
                 dist_img = Image.open(BytesIO(r.content)).convert(mode='RGB')
                 targets = []
                 for x in range(W):
@@ -80,19 +132,19 @@ def get_next_pixel(data):
                         ref_color = ref_img.getpixel((x, y))
                         dist_color = dist_img.getpixel((x * 2, y * 2))
                         if ref_color[3] > 0 and diff(ref_color[:3], dist_color) > 5:
-                            targets += [(x, y, ref_color[:3], dist_color)]
-                data.cached_targets = targets
+                            targets += [(x, y, ref_color[:3])]
+                data.save_targets(targets)
             except OSError:
                 pass
-    if len(targets) < 5:
+        data.reset_time()
+    target, remaining = data.get_random_cached_target()
+    if target is None:
         print(f"[{os.getpid()}] no enough pixel to update")
         return None
     else:
-        target = random.choice(targets)
-        data.cached_targets.remove(target)
-        x, y, ref_color, dist_color = target
-        print(f"[{os.getpid()}] pixel to update : {x},{y} {dist_color} => {ref_color} (remaining {len(targets)}/{total}) ({(total-len(targets))/total:.2%} done)")
-        return x, y, f"{ref_color[0]:02x}{ref_color[1]:02x}{ref_color[2]:02x}".upper()
+        x, y, color = target
+        print(f"[{os.getpid()}] pixel to update : {x},{y} => {color} (remaining {remaining}/{total}) ({(total-remaining)/total:.2%} done)")
+        return target
 
 def get_challenge():
     body = {
