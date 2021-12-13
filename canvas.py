@@ -141,5 +141,6 @@ def work():
 
 
 if __name__ == '__main__':
-    for p in range(8):
+    n_threads = int(os.environ['N']) if 'N' in os.environ['N'] else 4
+    for p in range(n_threads):
         Process(target=work).start()
