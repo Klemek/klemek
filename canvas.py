@@ -28,8 +28,10 @@ TIMEOUT = 10
 class Data:
     def __init__(self) -> None:
         self.cached_targets = []
-        self.lock = Lock()
+        self.img_lock = Lock()
         self.t0 = None
+        self.stored_challenges = []
+        self.stored_lock = Lock()
 
 
 def convert24to16(r, g, b):
@@ -47,7 +49,7 @@ def get_next_pixel(data):
     r = requests.get(f"{REF_URL}", headers=headers)
     ref_img = Image.open(BytesIO(r.content))
     total = sum(1 if ref_img.getpixel((x, y))[3] > 0 else 0 for x in range(W) for y in range(H))
-    data.lock.acquire()
+    data.img_lock.acquire()
     targets = data.cached_targets[::1]
     if data.t0 is None or (time.time() - data.t0) > TIMEOUT:
         r = requests.get(f"{URL}/canvas.png", headers=headers)
@@ -65,7 +67,7 @@ def get_next_pixel(data):
                 data.cached_targets = targets
             except OSError:
                 pass
-    data.lock.release()
+    data.img_lock.release()
     if len(targets) == 0:
         print("no pixel to update")
         return None
@@ -138,13 +140,13 @@ def paint(pixel_data, challenge, answer):
 def work(data):
     while True:
         try:
+            pixel_data = get_next_pixel(data)
+            if 
             challenge = get_challenge()
             if challenge is None:
                 continue
             answer = solve_challenge(challenge)
-            pixel_data = get_next_pixel(data)
-            if pixel_data is None:
-                continue
+            
             paint(pixel_data, challenge, answer)
         except KeyboardInterrupt:
             sys.exit(0)
