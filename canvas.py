@@ -9,7 +9,7 @@ import random
 import sys
 import traceback
 from multiprocessing import Process, RLock, RawValue, RawArray
-from ctypes import c_float, c_int
+from ctypes import c_int
 import time
 dir = os.path.dirname(os.path.realpath(__file__))
 
@@ -29,27 +29,20 @@ class Data:
         self.targets_cursor = 0
         self.cached_targets = [RawArray(c_int, TARGET_LENS) for _ in range(5)]
         self.t0_lock = RLock()
-        self.t0 = RawValue(c_float, 0)
+        self.t0 = RawValue(c_int, 0)
         self.challenge_lock = RLock()
     
     def is_time(self):
-        self.t0_lock.acquire()
-        try:
-            return time.time() - self.t0.value > TIMEOUT
-        finally:
-            self.t0_lock.release()
-    
-    def reset_time(self):
-        self.t0_lock.acquire()
-        try:
-            self.t0 = c_float(time.time())
-        finally:
-            self.t0_lock.release()
+        with self.t0_lock:
+            t1 = int(time.time())
+            if t1 - self.t0.value > TIMEOUT:
+                self.t0.value = t1
+                return True
+            return False
 
     
     def get_random_cached_target(self):
-        self.img_lock.acquire()
-        try:
+        with self.img_lock:
             size = self.targets_cursor
             if size >= PIXEL_THRESHOLD:
                 index = random.randint(0, size - 1)
@@ -62,13 +55,10 @@ class Data:
                     self.cached_targets[i][index] = self.cached_targets[i][size - 1]
                 self.targets_cursor = size - 1
                 return (x, y, f"{r:02x}{g:02x}{b:02x}".upper()), size - 1
-        finally:
-            self.img_lock.release()
         return None, 0
 
     def save_targets(self, targets):
-        self.img_lock.acquire()
-        try:
+        with self.img_lock:
             self.targets_cursor = len(targets)
             if self.targets_cursor > 0:
                 self.cached_targets[0][:self.targets_cursor] = [x for x,_,_ in targets]
@@ -76,13 +66,10 @@ class Data:
                 self.cached_targets[2][:self.targets_cursor] = [c[0] for _,_,c in targets]
                 self.cached_targets[3][:self.targets_cursor] = [c[1] for _,_,c in targets]
                 self.cached_targets[4][:self.targets_cursor] = [c[2] for _,_,c in targets]
-        finally:
-            self.img_lock.release()
     
     def get_stored_challenge(self):
         if os.path.exists(CHALLENGE_FILE):
-            self.challenge_lock.acquire()
-            try:
+            with self.challenge_lock:
                 lines = []
                 with open(CHALLENGE_FILE) as f:
                     lines = f.readlines()
@@ -91,19 +78,14 @@ class Data:
                         f.writelines(lines[1:])
                     data = lines[0].strip().split(',')
                     return data[:3], data[3], len(lines) - 1
-            finally:
-                self.challenge_lock.release()
         return None, None, 0
 
     def store_challenge(self, challenge, answer):
-        self.challenge_lock.acquire()
-        try:
+        with self.challenge_lock:
             with open(CHALLENGE_FILE, mode='a') as f:
                 f.write('\n' + ','.join(challenge + (answer,)))
             with open(CHALLENGE_FILE) as f:
                 return len(f.readlines())
-        finally:
-            self.challenge_lock.release()
 
 
 def convert24to16(r, g, b):
@@ -136,7 +118,6 @@ def get_next_pixel(data):
                 data.save_targets(targets)
             except OSError:
                 pass
-        data.reset_time()
     target, remaining = data.get_random_cached_target()
     if target is None:
         print(f"[{os.getpid()}] no enough pixel to update")
@@ -234,7 +215,8 @@ def work(data):
 
 
 if __name__ == '__main__':
-    data = Data()
     n_threads = int(os.environ['N']) if 'N' in os.environ else 8
-    for p in range(n_threads):
-        Process(target=work, args=(data,)).start()
+    data = Data()
+    processes = [Process(target=work, args=(data,)) for _ in range(n_threads)]
+    for p in processes:
+        p.start()
