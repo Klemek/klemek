@@ -56,8 +56,8 @@ def get_next_pixel(data):
                 data.cached_targets = targets
             except OSError:
                 pass
-    if len(targets) == 0:
-        print(f"[{os.getpid()}] no pixel to update")
+    if len(targets) < 5:
+        print(f"[{os.getpid()}] no enough pixel to update")
         return None
     else:
         x, y, ref_color, dist_color = random.choice(targets)
