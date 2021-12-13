@@ -140,14 +140,27 @@ def paint(pixel_data, challenge, answer):
 def work(data):
     while True:
         try:
+            challenge = None
+            answer = None
             pixel_data = get_next_pixel(data)
-            if 
-            challenge = get_challenge()
+            if pixel_data:
+                data.stored_lock.acquire()
+                if len(data.stored_challenge) > 0:
+                    print("using cached challenge")
+                    challenge, answer = data.stored_challenge.pop()
+                data.stored_lock.release()
             if challenge is None:
-                continue
-            answer = solve_challenge(challenge)
-            
-            paint(pixel_data, challenge, answer)
+                challenge = get_challenge()
+                if challenge is None:
+                    continue
+                answer = solve_challenge(challenge)
+            if pixel_data is None:
+                print("caching challenge")
+                data.stored_lock.acquire()
+                data.stored_challenge.append((challenge, answer))
+                data.stored_lock.release()
+            else:
+                paint(pixel_data, challenge, answer)
         except KeyboardInterrupt:
             sys.exit(0)
         except Exception as e:
