@@ -8,7 +8,7 @@ import hashlib
 import random
 import sys
 import traceback
-from multiprocessing import Process, RLock
+from multiprocessing import Process, RLock, RawValue, RawArray
 import time
 dir = os.path.dirname(os.path.realpath(__file__))
 
@@ -155,8 +155,7 @@ def paint(pixel_data, challenge, answer):
         print(f"[{os.getpid()}] cannot update pixel: {r.status_code} {r.reason}")
 
 
-def work():
-    data = Data()
+def work(data):
     while True:
         try:
             challenge = None
@@ -183,6 +182,7 @@ def work():
 
 
 if __name__ == '__main__':
+    data = Data()
     n_threads = int(os.environ['N']) if 'N' in os.environ else 8
     for p in range(n_threads):
-        Process(target=work).start()
+        Process(target=work, args=(data,)).start()
