@@ -145,9 +145,9 @@ def work(data):
             pixel_data = get_next_pixel(data)
             if pixel_data:
                 data.stored_lock.acquire()
-                if len(data.stored_challenge) > 0:
+                if len(data.stored_challenges) > 0:
                     print("using cached challenge")
-                    challenge, answer = data.stored_challenge.pop()
+                    challenge, answer = data.stored_challenges.pop()
                 data.stored_lock.release()
             if challenge is None:
                 challenge = get_challenge()
@@ -157,7 +157,7 @@ def work(data):
             if pixel_data is None:
                 print("caching challenge")
                 data.stored_lock.acquire()
-                data.stored_challenge.append((challenge, answer))
+                data.stored_challenges.append((challenge, answer))
                 data.stored_lock.release()
             else:
                 paint(pixel_data, challenge, answer)
