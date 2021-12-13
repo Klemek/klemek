@@ -60,7 +60,9 @@ def get_next_pixel(data):
         print(f"[{os.getpid()}] no enough pixel to update")
         return None
     else:
-        x, y, ref_color, dist_color = random.choice(targets)
+        target = random.choice(targets)
+        data.cached_targets.remove(target)
+        x, y, ref_color, dist_color = target
         print(f"[{os.getpid()}] pixel to update : {x},{y} {dist_color} => {ref_color} (remaining {len(targets)}/{total}) ({(total-len(targets))/total:.2%} done)")
         return x, y, f"{ref_color[0]:02x}{ref_color[1]:02x}{ref_color[2]:02x}".upper()
 
