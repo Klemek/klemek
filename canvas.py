@@ -54,7 +54,7 @@ class Data:
                 for i in range(5):
                     self.cached_targets[i][index] = self.cached_targets[i][size - 1]
                 self.targets_cursor = size - 1
-                return (x, y, f"{r:02x}{g:02x}{b:02x}".upper()), size - 1
+                return (x, y, f"{r:02x}{g:02x}{b:02x}".upper()), size
         return None, 0
 
     def save_targets(self, targets):
@@ -72,7 +72,7 @@ class Data:
             with self.challenge_lock:
                 lines = []
                 with open(CHALLENGE_FILE) as f:
-                    lines = f.readlines()
+                    lines = [line for line in f.readlines() if len(line.strip()) > 0]
                 if len(lines) > 0:
                     with open(CHALLENGE_FILE, mode='w') as f:
                         f.writelines(lines[1:])
@@ -83,7 +83,7 @@ class Data:
     def store_challenge(self, challenge, answer):
         with self.challenge_lock:
             with open(CHALLENGE_FILE, mode='a') as f:
-                f.write('\n' + ','.join(challenge + (answer,)))
+                f.write(','.join(challenge + (answer,)) + '\n')
             with open(CHALLENGE_FILE) as f:
                 return len(f.readlines())
 
