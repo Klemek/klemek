@@ -143,7 +143,7 @@ def work():
                 answer = solve_challenge(challenge)
             if pixel_data is None:
                 data.stored_challenges.append((challenge, answer))
-                print(f"[{os.getpid()}] caching challenge, remaining={len(data.stored_challenges)}")
+                print(f"[{os.getpid()}] caching challenge, total={len(data.stored_challenges)}")
             else:
                 paint(pixel_data, challenge, answer)
         except KeyboardInterrupt:
