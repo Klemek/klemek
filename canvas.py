@@ -2,12 +2,13 @@ from PIL import Image
 import requests
 from io import BytesIO
 import os
+import os.path
 import re
 import hashlib
 import random
 import sys
 import traceback
-from multiprocessing import Process
+from multiprocessing import Process, RLock
 import time
 dir = os.path.dirname(os.path.realpath(__file__))
 
@@ -16,12 +17,39 @@ URL = 'http://challs.xmas.htsp.ro:3002/'
 W = 320
 H = 240
 TIMEOUT = 10
+CHALLENGE_FILE = f"{dir}/challenges.csv"
 
 class Data:
     def __init__(self) -> None:
         self.cached_targets = []
         self.t0 = None
-        self.stored_challenges = []
+        self.challenge_lock = RLock()
+    
+    def get_stored_challenge(self):
+        if os.path.exists(CHALLENGE_FILE):
+            self.challenge_lock.acquire()
+            try:
+                lines = []
+                with open(CHALLENGE_FILE) as f:
+                    lines = f.readlines()
+                if len(lines) > 0:
+                    with open(CHALLENGE_FILE, mode='w') as f:
+                        f.writelines(lines[1:])
+                    data = lines[0].strip().split(',')
+                    return data[:3], data[3], len(lines) - 1
+            finally:
+                self.challenge_lock.release()
+        return None, None, 0
+
+    def store_challenge(self, challenge, answer):
+        self.challenge_lock.acquire()
+        try:
+            with open(CHALLENGE_FILE, mode='a') as f:
+                f.write('\n' + ','.join(challenge + (answer,)))
+            with open(CHALLENGE_FILE) as f:
+                return len(f.readlines())
+        finally:
+            self.challenge_lock.release()
 
 
 def convert24to16(r, g, b):
@@ -135,17 +163,17 @@ def work():
             answer = None
             pixel_data = get_next_pixel(data)
             if pixel_data:
-                if len(data.stored_challenges) > 0:
-                    print(f"[{os.getpid()}] using cached challenge, remaining={len(data.stored_challenges)}")
-                    challenge, answer = data.stored_challenges.pop()
+                challenge, answer, remaining = data.get_stored_challenge()
+                if challenge is not None:
+                    print(f"[{os.getpid()}] using cached challenge, remaining={remaining}")
             if challenge is None:
                 challenge = get_challenge()
                 if challenge is None:
                     continue
                 answer = solve_challenge(challenge)
             if pixel_data is None:
-                data.stored_challenges.append((challenge, answer))
-                print(f"[{os.getpid()}] caching challenge, total={len(data.stored_challenges)}")
+                total =data.store_challenge(challenge, answer)
+                print(f"[{os.getpid()}] caching challenge, total={total}")
             else:
                 paint(pixel_data, challenge, answer)
         except KeyboardInterrupt:
