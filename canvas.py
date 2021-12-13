@@ -9,6 +9,14 @@ import sys
 import traceback
 from multiprocessing import Process, Lock
 import time
+# try:
+#     from numba.cuda import jit
+# except ImportError as e:
+#     print(e)
+#     def jit(*args):
+#         def decorator(func):
+#             return func
+#         return decorator
 dir = os.path.dirname(os.path.realpath(__file__))
 
 REF_URL = 'https://raw.githubusercontent.com/Klemek/klemek/main/ref.png'
@@ -83,7 +91,6 @@ def get_challenge():
 
 charset = 'abcdefghijklmnopqrstuvwxyz0123456789_'
 
-
 def inc(p):
     if p[-1] != '_':
         return p[:-1] + charset[charset.index(p[-1]) + 1]
@@ -96,16 +103,19 @@ def inc(p):
 def solve_challenge(challenge):
     salt, md5, _ = challenge
     current = 'a'
+    h0 = hashlib.md5(salt.encode('ascii'))
     i = 0
     t0 = time.time()
-    while True:
-        hash = hashlib.md5((salt+current).encode('ascii')).hexdigest()
-        i += 1
-        if hash.startswith(md5):
-            dt = time.time() - t0
-            print(f"solved challenge: {current} {i:,} {dt:.3f}s {i/dt:,.3f}/s")
-            return current
+    h = h0.copy()
+    while not h.hexdigest().startswith(md5):
+        h = h0.copy()
         current = inc(current)
+        h.update(current.encode('ascii'))
+        i += 1
+    dt = time.time() - t0
+    print(f"solved challenge: {current} count={i:,} time={dt:.3f}s speed={i/dt:,.3f}/s")
+    return current
+        
 
 
 def paint(pixel_data, challenge, answer):
