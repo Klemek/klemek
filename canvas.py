@@ -8,6 +8,7 @@ import random
 import sys
 import traceback
 from multiprocessing import Process, Lock
+import time
 dir = os.path.dirname(os.path.realpath(__file__))
 
 REF_URL = 'https://raw.githubusercontent.com/Klemek/klemek/main/ref.png'
@@ -94,11 +95,13 @@ def solve_challenge(challenge):
     salt, md5, _ = challenge
     current = 'a'
     i = 0
+    t0 = time.time()
     while True:
         hash = hashlib.md5((salt+current).encode('ascii')).hexdigest()
         i += 1
         if hash.startswith(md5):
-            print(f"solved challenge: {current} {i:,}")
+            dt = time.time() - t0
+            print(f"solved challenge: {current} {i:,} {dt:.3f}s {i/dt:,.3f}/s")
             return current
         current = inc(current)
 
