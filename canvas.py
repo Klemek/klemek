@@ -17,8 +17,8 @@ REF_URL = 'https://raw.githubusercontent.com/Klemek/klemek/main/ref.png'
 URL = 'http://challs.xmas.htsp.ro:3002/'
 W = 320
 H = 240
-TIMEOUT = 10
-TARGET_LENS = 10000
+TIMEOUT = 30
+TARGET_LENS = 78000
 CHALLENGE_FILE = f"{dir}/challenges.csv"
 PIXEL_THRESHOLD = 5
 
