@@ -1,4 +1,4 @@
-from PIL import Image, UnidentifiedImageError
+from PIL import Image
 import requests
 from io import BytesIO
 import os
@@ -100,11 +100,7 @@ def get_next_pixel(data):
         "Cache-Control": "no-cache",
         "Pragma": "no-cache"
     }
-    r = requests.get(f"{REF_URL}", headers=headers)
-    try:
-        ref_img = Image.open(BytesIO(r.content))
-    except UnidentifiedImageError:
-        return None
+    ref_img = Image.open("ref.png")
     total = sum(1 if ref_img.getpixel((x, y))[3] > 0 else 0 for x in range(W) for y in range(H))
     if data.is_time():
         r = requests.get(f"{URL}/canvas.png", headers=headers)
