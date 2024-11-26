@@ -29,7 +29,7 @@ def make_request(path: str, method: str = "GET") -> dict | list:
 with open("README.md", mode="w") as readme:
     readme.write(
         f"""
-[![Klemek's GitHub stats](https://github-readme-stats.vercel.app/api?username={GITHUB_USERNAME}&count_private=true&show_icons=true&theme=gruvbox)](https://github.com/anuraghazra/github-readme-stats)
+[![{GITHUB_USERNAME}'s GitHub stats](https://github-readme-stats.vercel.app/api?username={GITHUB_USERNAME}&count_private=true&show_icons=true&theme=gruvbox)](https://github.com/anuraghazra/github-readme-stats)
 
 [![Top Langs](https://github-readme-stats.vercel.app/api/top-langs/?username={GITHUB_USERNAME}&layout=compact&count_private=true&show_icons=true&theme=gruvbox)](https://github.com/anuraghazra/github-readme-stats)
 
