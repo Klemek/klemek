@@ -46,5 +46,5 @@ with open("README.md", mode="w") as readme:
         if data["homepage"] is not None and len(data["homepage"]):
             created_at = data["created_at"].split("-")[0]
             readme.write(
-                f"| [{data['name']}]({data['homepage']}) <small> ([repo]({data['html_url']})) </small> | {data['description']} | {created_at} |\n"
+                f"| **[{data['name']}]({data['homepage']})** <sub> ([repo]({data['html_url']})) </sub> | {data['description']} | {created_at} |\n"
             )
