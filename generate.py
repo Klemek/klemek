@@ -43,7 +43,11 @@ with open("README.md", mode="w") as readme:
     )
 
     for data in make_request(f"/user/repos?sort=created&direction=desc&per_page=100"):
-        if data["homepage"] is not None and len(data["homepage"]):
+        if (
+            data["homepage"] is not None
+            and len(data["homepage"])
+            and not data["archived"]
+        ):
             created_at = data["created_at"].split("-")[0]
             readme.write(
                 f"| **[{data['name']}]({data['homepage']})** <sub> ([repo]({data['html_url']})) </sub> | {data['description']} | {created_at} |\n"
