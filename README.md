@@ -29,4 +29,3 @@
 | **[klemek.github.io](https://klemek.github.io/)** <sub> ([repo](https://github.com/Klemek/klemek.github.io)) </sub> | github pages root | 2019 |
 | **[marble-generator-js](https://klemek.github.io/marble-generator-js/)** <sub> ([repo](https://github.com/Klemek/marble-generator-js)) </sub> | Generate a marble-like pattern | 2019 |
 | **[smooth-clock](https://klemek.github.io/smooth-clock/)** <sub> ([repo](https://github.com/Klemek/smooth-clock)) </sub> | A smooth html canvas + js clock | 2019 |
-| **[entr0py](https://klemek.github.io/entr0py/)** <sub> ([repo](https://github.com/Klemek/entr0py)) </sub> | Calculate entropy of your binary typing | 2018 |
